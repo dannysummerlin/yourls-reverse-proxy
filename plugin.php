@@ -21,8 +21,9 @@ function reverseProxy_useReverseProxy($url, $statusCode) {
 	// need to verify that GET parameters are kept
 	$method = $_SERVER['REQUEST_METHOD'];
 	$headers = null; // blank for now
+	$endpoint = yourls_get_keyword_longurl(str_replace('/proxy', '', $url));
 	// likely should check for headers from request - $headerStringValue = $_SERVER['HTTP_XXXXXX_XXXX'];
-	$response = yourls_http_request($method, $url, $headers, ($method === 'POST') ? file_get_contents('php://input') : null);
+	$response = yourls_http_request($method, $endpoint, $headers, ($method === 'POST') ? file_get_contents('php://input') : null);
 	yourls_status_header($response->status_code);
 	if(isset($response->body)) {
 		echo $response->body;
