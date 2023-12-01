@@ -19,6 +19,7 @@ function reverseProxy_checkForReverseProxy($args) {
 }
 function reverseProxy_useReverseProxy($url, $statusCode) {
 	$currentLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+	// need to verify that GET parameters are kept
 	$method = $_SERVER['REQUEST_METHOD'];
 	$headers = null; // blank for now
 	$response = yourls_http_post($url, $headers, ($method === 'POST') ? file_get_contents('php://input') : null);
