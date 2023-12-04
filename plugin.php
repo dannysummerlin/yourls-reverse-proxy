@@ -17,14 +17,42 @@ function reverseProxy_useReverseProxy($keyword) {
 	// 1. the request itself - easy enough to scan for HTTP_ and X_ headers and pass them along
 	// 2. the short URL setup - tougher because then I need to make an extra setup feature, so v2
 		$headers = array();
-		if(isset($_SERVER['HTTP_CONTENT_TYPE']))
-			$headers[] = $_SERVER['HTTP_CONTENT_TYPE'];
+		$data = array();
+		$options = array();
+		if(isset($_SERVER['CONTENT_TYPE']))
+			$headers[] = 'Content-type: '.$_SERVER['CONTENT_TYPE'];
+		else
+			$headers[] = 'Content-type: application/json';
+		if($method === 'POST') {
+			$requestData = file_get_contents('php://input');
+			try {
+				$requestJSON = json_decode($requestData);
+				if(isset($requestJSON->{'$content'})) {
+					$data = $requestJSON->{'$content'};
+					$headers['CONTENT_TYPE'] = $requestJSON->{'$content-type'};
+				} else
+					$data = $requestData;
+			} catch(Exception $e) {
+				$data = $requestData;
+			}
+		}
 		$endpoint = yourls_get_keyword_longurl(str_replace('proxy_', '', $keyword));
 		if(isset($endpoint)) {
-			$response = yourls_http_request($method, $endpoint, $headers, ($method === 'POST') ? file_get_contents('php://input') : array(), array());
-			yourls_status_header($response->status_code);
-			if(isset($response->body)) {
-				echo $response->body;
+			$curl = curl_init();
+			curl_setopt_array($curl, array(
+				CURLOPT_URL => $endpoint,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_CUSTOMREQUEST => $method,
+				CURLOPT_HTTPHEADER => $headers,
+				CURLOPT_POSTFIELDS => $data
+			));
+			$response = curl_exec($curl);
+			$err = curl_error($curl);
+			curl_close($curl);
+			$out = isset($response) ? $response : $err;
+			yourls_status_header(curl_getinfo($curl, CURLINFO_RESPONSE_CODE));
+			if(isset($out->body)) {
+				echo $out->body;
 			}
 			die();
 		} else
