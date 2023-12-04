@@ -19,23 +19,23 @@ function reverseProxy_useReverseProxy($keyword) {
 		$headers = array();
 		$data = array();
 		$options = array();
-		if(isset($_SERVER['CONTENT_TYPE']))
-			$headers[] = 'Content-type: '.$_SERVER['CONTENT_TYPE'];
-		else
-			$headers[] = 'Content-type: application/json';
+		$contentType = 'application/json';
+		if(isset($_SERVER['CONTENT_TYPE']) && !stristr($_SERVER['CONTENT_TYPE'], 'plain'))
+			$contentType = $_SERVER['CONTENT_TYPE'];
 		if($method === 'POST') {
 			$requestData = file_get_contents('php://input');
 			try {
 				$requestJSON = json_decode($requestData);
 				if(isset($requestJSON->{'$content'})) {
 					$data = $requestJSON->{'$content'};
-					$headers['CONTENT_TYPE'] = $requestJSON->{'$content-type'};
+					$contentType = $requestJSON->{'$content-type'};
 				} else
 					$data = $requestData;
 			} catch(Exception $e) {
 				$data = $requestData;
 			}
 		}
+		$headers[] = 'Content-type: '.$contentType;
 		$endpoint = yourls_get_keyword_longurl(str_replace('proxy_', '', $keyword));
 		if(isset($endpoint)) {
 			$curl = curl_init();
@@ -50,10 +50,14 @@ function reverseProxy_useReverseProxy($keyword) {
 			$err = curl_error($curl);
 			curl_close($curl);
 			$out = isset($response) ? $response : $err;
+		// temporarily allow all for CORS
+			header('Access-Control-Allow-Origin: *');
+			header('Content-type: '. curl_getinfo($curl, CURLINFO_CONTENT_TYPE));
 			yourls_status_header(curl_getinfo($curl, CURLINFO_RESPONSE_CODE));
 			if(isset($out->body)) {
 				echo $out->body;
-			}
+			} else
+				echo $out;
 			die();
 		} else
 			return $keyword;
